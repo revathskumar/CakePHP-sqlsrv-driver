@@ -1,6 +1,6 @@
 <?php
 /**
- * MS SQL layer for DBO
+ * SQLSRV layer for DBO
  *
  * PHP versions 4 and 5
  *
@@ -19,7 +19,7 @@
  */
 
 /**
- * MS SQL layer for DBO
+ * SQLSRV layer for DBO
  *
  * Long description for class
  *
@@ -33,7 +33,7 @@ class DboSqlsrv extends DboSource {
  *
  * @var string
  */
-	var $description = "MS SQL DBO Driver";
+	var $description = "SQLSRV DBO Driver";
 
 /**
  * Starting quote character for quoted identifiers
@@ -58,7 +58,7 @@ class DboSqlsrv extends DboSource {
 	var $__fieldMappings = array();
 
 /**
- * Base configuration settings for MS SQL driver
+ * Base configuration settings for SQLSRV driver
  *
  * @var array
  */
@@ -72,7 +72,7 @@ class DboSqlsrv extends DboSource {
 	);
 
 /**
- * MS SQL column definition
+ * SQLSRV column definition
  *
  * @var array
  */
@@ -110,7 +110,7 @@ class DboSqlsrv extends DboSource {
  */
 	var $__lastQueryHadError = false;
 /**
- * MS SQL DBO driver constructor; sets SQL Server error reporting defaults
+ * SQLSRV DBO driver constructor; sets SQL Server error reporting defaults
  *
  * @param array $config Configuration data from app/config/databases.php
  * @return boolean True if connected successfully, false on error
@@ -154,7 +154,7 @@ class DboSqlsrv extends DboSource {
 			$this->connection = sqlsrv_connect($config['host'] . $port, $connectionInfo);
 //			debug(sqlsrv_errors());
 		} else {
-			$this->connection = mssql_pconnect($config['host'] . $port, $config['login'], $config['password']);
+			$this->connection = sqlsrv_pconnect($config['host'] . $port, $config['login'], $config['password']);
 		}
 
 		if ($this->connection) {
@@ -165,7 +165,7 @@ class DboSqlsrv extends DboSource {
 	}
 
 /**
- * Check that MsSQL is installed/loaded
+ * Check that Sqlsrv is installed/loaded
  *
  * @return boolean
  */
@@ -202,7 +202,6 @@ class DboSqlsrv extends DboSource {
  * @return boolean
  */
 	function _begin() {
-//		debug(sqlsrv_begin_transaction($this->connection));
 		return sqlsrv_begin_transaction($this->connection);
 	}
 
