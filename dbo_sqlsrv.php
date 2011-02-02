@@ -97,9 +97,9 @@ class DboSqlsrv extends DboSource {
  * @access protected
  */
 	var $_commands = array(
-		'begin'    => 'BEGIN TRANSACTION',
-		'commit'   => 'COMMIT',
-		'rollback' => 'ROLLBACK'
+		'begin'    => 'BEGIN TRAN',
+		'commit'   => 'COMMIT TRAN',
+		'rollback' => 'ROLLBACK TRAN'
 	);
 
 /**
@@ -150,7 +150,7 @@ class DboSqlsrv extends DboSource {
 		}
 
 		if (!$config['persistent']) {
-			$connectionInfo = array("UID" => $config['login'], "PWD" => $config['password'], "Database" => $config['database']);
+			$connectionInfo = array("UID" => $config['login'], "PWD" => $config['password'], "Database" => $config['database'],'MultipleActiveResultSets' => 1,'ConnectionPooling' => 0);
 			$this->connection = sqlsrv_connect($config['host'] . $port, $connectionInfo);
 //			debug(sqlsrv_errors());
 		} else {
@@ -195,6 +195,35 @@ class DboSqlsrv extends DboSource {
 		$this->__lastQueryHadError = ($result === false);
 		return $result;
 	}
+
+/**
+ * Begin a Transaction
+ *
+ * @return boolean
+ */
+	function _begin() {
+//		debug(sqlsrv_begin_transaction($this->connection));
+		return sqlsrv_begin_transaction($this->connection);
+	}
+
+	/**
+	 * Commit Transaction
+	 *
+	 * @return boolean
+	 */
+	function _commit() {
+		return sqlsrv_commit($this->connection);
+	}
+
+/**
+ * Rollback a transaction
+ *
+ * @return boolean
+ */
+	function  _rollback() {
+		return sqlsrv_rollback($this->connection);
+	}
+
 /**
  * Returns an array of sources (tables) in the database.
  *
@@ -207,7 +236,8 @@ class DboSqlsrv extends DboSource {
 			return $cache;
 		}
 		$result = $this->fetchAll('SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES', false);
-		
+		$syn = $this->fetchAll('select SUBSTRING(base_object_name,2,LEN(base_object_name)-2) as object,name as TABLE_NAME  from sys.synonyms', false);
+
 		if (!$result || empty($result)) {
 			return array();
 		} else {
@@ -216,7 +246,12 @@ class DboSqlsrv extends DboSource {
 			foreach ($result as $table) {
 				$tables[] = $table[0]['TABLE_NAME'];
 			}
-			
+
+			foreach ($syn as $table){
+//				$tables[] = $table[0]['TABLE_NAME'];
+				$this->synonyms[$table[0]['TABLE_NAME']] = $table[0]['object'];
+			}
+//			debug($this->synonyms);
 			parent::listSources($tables);
 
 			return $tables;
@@ -235,13 +270,18 @@ class DboSqlsrv extends DboSource {
 		if ($cache != null) {
 			return $cache;
 		}
-
+//                   debug($model->useTable);
 		$table = $this->fullTableName($model, false);
+		if(array_key_exists($table, $this->synonyms)){
+			$table = $this->synonyms[$table];
+		}
+//                debug($table);
+//                debug($this->synonyms);
 		$cols = $this->fetchAll("SELECT COLUMN_NAME as Field, DATA_TYPE as Type, COL_LENGTH('" . $table . "', COLUMN_NAME) as Length, IS_NULLABLE As [Null], COLUMN_DEFAULT as [Default], COLUMNPROPERTY(OBJECT_ID('" . $table . "'), COLUMN_NAME, 'IsIdentity') as [Key], NUMERIC_SCALE as Size FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" . $table . "'", false);
 
 		$fields = false;
 		foreach ($cols as $column) {
-//			debug($column);
+
 			$field = $column[0]['Field'];
 			$fields[$field] = array(
 				'type' => $this->column($column[0]['Type']),
@@ -579,7 +619,7 @@ class DboSqlsrv extends DboSource {
 				} else {
 					$this->map[$index++] = array(0, $column);
 				}
-			
+
 			$j++;
 		}
 	}
@@ -608,7 +648,9 @@ class DboSqlsrv extends DboSource {
 					$offset = intval($offset[1]) + intval($limitVal[1]);
 					$rOrder = $this->__switchSort($order);
 					list($order2, $rOrder) = array($this->__mapFields($order), $this->__mapFields($rOrder));
-					return "SELECT * FROM (SELECT {$limit} * FROM (SELECT TOP {$offset} {$fields} FROM {$table} {$alias} {$joins} {$conditions} {$group} {$order}) AS Set1 {$rOrder}) AS Set2 {$order2}";
+					$limitint = (int)$offset + 1 - (int)trim(str_replace('TOP','', $limit));
+					return "SELECT * FROM (SELECT row_number() OVER ({$order}) as resultNum, {$fields} FROM {$table} {$alias} {$joins} {$conditions} {$group}) as numberResults WHERE resultNum BETWEEN {$limitint} and {$offset} ";
+					//return "SELECT * FROM (SELECT {$limit} * FROM (SELECT TOP {$offset} {$fields} FROM {$table} {$alias} {$joins} {$conditions} {$group} {$order}) AS Set1 {$rOrder}) AS Set2 {$order2}";
 				} else {
 					return "SELECT {$limit} {$fields} FROM {$table} {$alias} {$joins} {$conditions} {$group} {$order}";
 				}
