@@ -86,6 +86,7 @@ class DboSqlsrv extends DboSource {
 		'timestamp' => array('name' => 'timestamp', 'format' => 'Y-m-d H:i:s', 'formatter' => 'date'),
 		'time'		=> array('name' => 'datetime', 'format' => 'H:i:s', 'formatter' => 'date'),
 		'date'		=> array('name' => 'datetime', 'format' => 'Y-m-d', 'formatter' => 'date'),
+		'datetime2'		=> array('name' => 'datetime', 'format' => 'Y-m-d H:i:s.0000000', 'formatter' => 'date'),
 		'binary'	=> array('name' => 'image'),
 		'boolean'	=> array('name' => 'bit')
 	);
@@ -151,6 +152,9 @@ class DboSqlsrv extends DboSource {
 
 		if (!$config['persistent']) {
 			$connectionInfo = array("UID" => $config['login'], "PWD" => $config['password'], "Database" => $config['database'],'MultipleActiveResultSets' => 1,'ConnectionPooling' => 0);
+			if($config['ReturnDatesAsStrings']){
+				$connectionInfo['ReturnDatesAsStrings'] = 1;
+			}
 			$this->connection = sqlsrv_connect($config['host'] . $port, $connectionInfo);
 //			debug(sqlsrv_errors());
 		} else {
@@ -300,7 +304,7 @@ class DboSqlsrv extends DboSource {
 			} elseif (!$fields[$field]['key']) {
 				unset($fields[$field]['key']);
 			}
-			if (in_array($fields[$field]['type'], array('date', 'time', 'datetime', 'timestamp'))) {
+			if (in_array($fields[$field]['type'], array('date', 'time', 'datetime', 'timestamp','datetime2'))) {
 				$fields[$field]['length'] = null;
 			}
 		}
@@ -564,7 +568,7 @@ class DboSqlsrv extends DboSource {
 			list($col, $limit) = explode('(', $col);
 		}
 
-		if (in_array($col, array('date', 'time', 'datetime', 'timestamp'))) {
+		if (in_array($col, array('date', 'time', 'datetime', 'timestamp','datetime2'))) {
 			return $col;
 		}
 		if ($col == 'bit') {
@@ -729,13 +733,10 @@ class DboSqlsrv extends DboSource {
  */
 	function fetchResult() {
 		if ($row = sqlsrv_fetch_array($this->results,SQLSRV_SCROLL_NEXT)) {
-//			debug($row);
-//			debug($this->map);
 			$resultRow = array();
 			$i = 0;
 
 			foreach ($row as $index => $field) {
-//				debug($this->map);
 				list($table, $column) = $this->map[$index];
 				$resultRow[$table][$column] = $row[$index];
 				$i++;
