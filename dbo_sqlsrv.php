@@ -275,8 +275,10 @@ class DboSqlsrv extends DboSource {
 		}
 //                   debug($model->useTable);
 		$table = $this->fullTableName($model, false);
-		if(array_key_exists($table, $this->synonyms)){
-			$table = $this->synonyms[$table];
+		if(!empty ($this->synonyms)){
+		    if(array_key_exists($table, $this->synonyms)){
+				$table = $this->synonyms[$table];
+		    }
 		}
 //                debug($table);
 //                debug($this->synonyms);
