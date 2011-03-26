@@ -134,31 +134,16 @@ class DboSqlsrv extends DboSource {
 	function connect() {
 		$config = $this->config;
 
-		$os = env('OS');
-		if (!empty($os) && strpos($os, 'Windows') !== false) {
-			$sep = ',';
-		} else {
-			$sep = ':';
-		}
 		$this->connected = false;
-
-		if (is_numeric($config['port'])) {
-			$port = $sep . $config['port'];	// Port number
-		} elseif ($config['port'] === null) {
-			$port = '';						// No port - SQL Server 2005
-		} else {
-			$port = '\\' . $config['port'];	// Named pipe
-		}
 
 		if (!$config['persistent']) {
 			$connectionInfo = array("UID" => $config['login'], "PWD" => $config['password'], "Database" => $config['database'],'MultipleActiveResultSets' => 1,'ConnectionPooling' => 0);
 			if(isset($config['ReturnDatesAsStrings'])){
 				$connectionInfo['ReturnDatesAsStrings'] = 1;
 			}
-			$this->connection = sqlsrv_connect($config['host'] . $port, $connectionInfo);
-//			debug(sqlsrv_errors());
+			$this->connection = sqlsrv_connect($config['host'], $connectionInfo);
 		} else {
-			$this->connection = sqlsrv_pconnect($config['host'] . $port, $config['login'], $config['password']);
+			$this->connection = sqlsrv_pconnect($config['host'], $config['login'], $config['password']);
 		}
 
 		if ($this->connection) {
@@ -239,21 +224,25 @@ class DboSqlsrv extends DboSource {
 			return $cache;
 		}
 		$result = $this->fetchAll('SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES', false);
-		$syn = $this->fetchAll('select SUBSTRING(base_object_name,2,LEN(base_object_name)-2) as object,name as TABLE_NAME  from sys.synonyms', false);
+		
+		
 
 		if (!$result || empty($result)) {
 			return array();
 		} else {
+			$syn = $this->fetchAll('select SUBSTRING(base_object_name,2,LEN(base_object_name)-2) as object,name as TABLE_NAME  from sys.synonyms', false);
 			$tables = array();
 
 			foreach ($result as $table) {
 				$tables[] = $table[0]['TABLE_NAME'];
 			}
-
-			foreach ($syn as $table){
+			if(!empty ($syn)){
+			    foreach ($syn as $table){
 //				$tables[] = $table[0]['TABLE_NAME'];
 				$this->synonyms[$table[0]['TABLE_NAME']] = $table[0]['object'];
+			    }
 			}
+			
 //			debug($this->synonyms);
 			parent::listSources($tables);
 
