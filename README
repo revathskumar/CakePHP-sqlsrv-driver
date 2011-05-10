@@ -1,3 +1,17 @@
 CakePHP dbo for Sql server 2008
-Supoorts easy pagination.
+Supports easy pagination.
 Supports Synonyms in sql server
+
+
+
+    var $default = array(
+		'driver' => 'sqlsrv',
+		'persistent' => false,
+		'host' => 'Myhome-PC\SQLEXPRESS', // or ip-address(192.168.1.13)
+		'login' => 'username',
+		'password' => 'password',
+		'database' => 'db',
+		'prefix' => 'tbl',
+		'port' => NULL,
+		'returnDatesAsStrings' => True
+	);
