@@ -153,7 +153,7 @@ class DboSqlsrv extends DboSource {
 		if (!$config['persistent']) {
 			$connectionInfo = array("UID" => $config['login'], "PWD" => $config['password'], "Database" => $config['database'],'MultipleActiveResultSets' => 1,'ConnectionPooling' => 0);
 			if(isset($config['ReturnDatesAsStrings'])){
-				$connectionInfo['ReturnDatesAsStrings'] = 1;
+				$connectionInfo['ReturnDatesAsStrings'] = $config['ReturnDatesAsStrings'];
 			}
 			$this->connection = sqlsrv_connect($config['host'] . $port, $connectionInfo);
 //			debug(sqlsrv_errors());
