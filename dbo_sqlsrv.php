@@ -110,6 +110,15 @@ class DboSqlsrv extends DboSource {
  * @access private
  */
 	var $__lastQueryHadError = false;
+
+ /**
+  * To store all the Schema of all the tables
+  *
+  * @var array
+  */
+
+        var $tableShema = array();
+
 /**
  * SQLSRV DBO driver constructor; sets SQL Server error reporting defaults
  *
@@ -238,7 +247,7 @@ class DboSqlsrv extends DboSource {
 		if ($cache != null) {
 			return $cache;
 		}
-		$result = $this->fetchAll('SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES', false);
+		$result = $this->fetchAll('SELECT TABLE_NAME,TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES', false);
 		$syn = $this->fetchAll('select SUBSTRING(base_object_name,2,LEN(base_object_name)-2) as object,name as TABLE_NAME  from sys.synonyms', false);
 
 		if (!$result || empty($result)) {
@@ -248,6 +257,7 @@ class DboSqlsrv extends DboSource {
 
 			foreach ($result as $table) {
 				$tables[] = $table[0]['TABLE_NAME'];
+                                $this->tableSchema[$table[0]['TABLE_NAME']] = $table[0]['TABLE_SCHEMA'];
 			}
 
 			foreach ($syn as $table){
@@ -654,10 +664,10 @@ class DboSqlsrv extends DboSource {
 					$rOrder = $this->__switchSort($order);
 					list($order2, $rOrder) = array($this->__mapFields($order), $this->__mapFields($rOrder));
 					$limitint = (int)$offset + 1 - (int)trim(str_replace('TOP','', $limit));
-					return "SELECT * FROM (SELECT row_number() OVER ({$order}) as resultNum, {$fields} FROM {$table} {$alias} {$joins} {$conditions} {$group}) as numberResults WHERE resultNum BETWEEN {$limitint} and {$offset} ";
+					return "SELECT * FROM (SELECT row_number() OVER ({$order}) as resultNum, {$fields} FROM {$this->tableShema[$table]}.{$table} {$alias} {$joins} {$conditions} {$group}) as numberResults WHERE resultNum BETWEEN {$limitint} and {$offset} ";
 					//return "SELECT * FROM (SELECT {$limit} * FROM (SELECT TOP {$offset} {$fields} FROM {$table} {$alias} {$joins} {$conditions} {$group} {$order}) AS Set1 {$rOrder}) AS Set2 {$order2}";
 				} else {
-					return "SELECT {$limit} {$fields} FROM {$table} {$alias} {$joins} {$conditions} {$group} {$order}";
+					return "SELECT {$limit} {$fields} FROM {$this->tableShema[$table]}.{$table} {$alias} {$joins} {$conditions} {$group} {$order}";
 				}
 			break;
 			case "schema":
